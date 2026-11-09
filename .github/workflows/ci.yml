@@ -1,0 +1,32 @@
+name: epoll TCP Server CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Server Binary
+        run: make
+
+      - name: Start Server & Run Correctness Tests
+        run: |
+          ./server 8080 &
+          SERVER_PID=$!
+          sleep 1
+          python3 tests/client_test.py
+          kill $SERVER_PID
+
+      - name: Run Load Test
+        run: |
+          ./server 8080 &
+          SERVER_PID=$!
+          sleep 1
+          python3 tests/load_test.py --clients 50 --messages 100
+          kill $SERVER_PID
